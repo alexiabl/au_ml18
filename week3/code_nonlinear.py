@@ -22,11 +22,14 @@ class PerceptronClassifier():
 
     def __init__(self):
         self.w = None
+        self.rate = 0.01
+        self.misclassifies = -1
+        self.training_history = []
         
     def fit(self, X, y, maxiter=1<<16, w=None):
         """
         Implement Pocket Perceptron learning algorithm - run for at most maxiter iterations and store best w found as well as the training history 
-        
+        https://www.codeproject.com/Articles/1229772/Machine-Learning-Basics-Pocket-Learning-Algorithm
         Args:
         X: numpy array shape (n,d) - training data 
         y: numpy array shape (n,) - training labels
@@ -40,11 +43,31 @@ ies)
     
         """
         if w is None:
-            w = np.zeros(X.shape[1])       
+            w = np.zeros(X.shape[1])
         bestw = w
         ### YOUR CODE
+        for _ in range(maxiter):
+            
+            #CLASS -find misclassified indices
+            ##bad_index = np.nonzero(np.sign(X.dot(bestw))!=y)[0]
+            #pick random misclassified point i = np.random.choice(bad_index)
+            ##bestw+=y[i]*X[i]
+            #
+            errors=0
+            for inputs,labels in zip(X,y):
+                update = self.predict(inputs)
+                previous = w[1:]
+                w[1:] += self.rate *(labels-update)*inputs
+                w[0] += self.rate * (labels - update)
+                errors += int(update != 0.0)
+                if (errors == -1 or errors < self.misclassifies):
+                    bestw = w
+                    self.misclassifies = errors
+                    
+                self.training_history.append(self.misclassifies)     
         ### END CODE
         self.w = bestw
+        
 
     def predict(self, X):
         """ predict function for classifier
@@ -55,7 +78,8 @@ ies)
         """
         pred = None
         ### YOUR CODE HERE 1-2 lines
-        ### END CODE
+        summ = np.inner(X,self.w[1:])
+        pred = np.where(summ >= 0.0,1,-1)
         return pred
 
     def score(self, X, y):
@@ -68,6 +92,8 @@ ies)
         """
         score = 0 
         ### YOUR CODE HERE 1-3 lines
+        score = np.mean(self.predict(X) == y)
+        print('Score =',score)
         ### END CODE
         return score
     
@@ -85,6 +111,7 @@ def test_pla_train(n_samples=10):
     classifier = PerceptronClassifier()
     classifier.fit(X, y)
     assert np.all(classifier.predict(X) == y), 'all predictions should be correct'
+    classifier.score(X,y)
     print('test completed')
     
 
@@ -120,6 +147,7 @@ def plot_hyperplane(w, ax, *args, **kwargs):
     y = np.array((0, 1))
     
     ### YOUR CODE HERE 
+    
     ### END CODE
     
     # plot the hyperplane
@@ -152,8 +180,10 @@ def square_transform(X):
     """
     # Insert code here to transform the data - aim to make a vectorized solution!
     Xt = X
-
     ### YOUR CODE HERE 2-4 lines
+    Xt = np.c_(np.ones(2),X)
+    Xt = np.power(Xt,2)
+    Xt = np.transpose(Xt)
     ### END CODE 
     
     return Xt
@@ -188,6 +218,10 @@ def plot_contour(w, phi, ax):
     xm, ym = np.meshgrid(xs, ys)
     img = np.zeros((nsize, nsize)) # makes a 100 x 100 2d array
     ### YOUR CODE
+    points = np.c_[xm.reshape(1000),ym.reshape(1000)] #perform reshape
+    phi_points = phi(points)
+    preds = phi_points.dot(w) #predict all these points by dotting with w
+    img = preds.reshape(100,100)
     ### END CODE
     cont = ax.contour(xs, ys, img, [0], colors='r', linewidths=3)
     return cont
@@ -207,6 +241,7 @@ def poly_transform(X):
     """
     Xt = X
     ### YOUR CODE HERE
+    
     ### END CODE
     return Xt
 
@@ -226,7 +261,10 @@ def plot_data():
 
     fig, axes = plt.subplots(1, 4, figsize=(20, 20))
     
-    ### YOUR CODE 
+    ### YOUR CODE similar to plotData from description
+    for i in range(4):
+        X = D['X', str(i)+1]
+        Y = D['Y',str(i)+1]
     ### END CODE
     plt.show()
 
@@ -352,6 +390,7 @@ class LinRegClassifier():
         """  
         w = np.zeros(X.shape[1])
         #YOUR CODE HERE 1-3 lines
+        #XTX-1 XT*y compute this
         #END CODE
         self.w =  w
 
