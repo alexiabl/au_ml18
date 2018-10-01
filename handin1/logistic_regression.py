@@ -1,4 +1,8 @@
 import numpy as np
+import re
+import os
+import math
+import matplotlib.pyplot as plt
 from h1_util import numerical_grad_check
 
 def logistic(z):
@@ -13,16 +17,18 @@ def logistic(z):
        logi: numpy array shape (d,) each entry transformed by the logistic function 
     """
     logi = np.zeros(z.shape)
-    ### YOUR CODE HERE 1-5 lines
+    ### YOUR CODE HERE 1-5 lines  
+    logi = 1/(1+np.exp(-z))
     ### END CODE
+              
     assert logi.shape == z.shape
     return logi
-
 
 class LogisticRegressionClassifier():
 
     def __init__(self):
         self.w = None
+
 
     def cost_grad(self, X, y, w):
         """
@@ -42,6 +48,24 @@ class LogisticRegressionClassifier():
         cost = 0
         grad = np.zeros(w.shape)
         ### YOUR CODE HERE 5 - 15 lines
+        
+        ## Must convert data first
+        y = np.where(y == 0, -1, 1) 
+        
+        #Calculate cost cross entropy and gradient   
+        c=0
+        gradient=0
+        N = len(X)                                                    
+        for i in range(N):
+            c += np.log(1+np.exp(-y[i]*np.dot(w.T,X[i])))
+                
+        cost = 1/N * c
+        
+        for i in range(N):
+            gradient += ((y[i]*X[i]) / (1+np.exp(y[i]* np.dot(w.T,X[i]))))
+            
+        grad = (-1/N) * gradient  
+        
         ### END CODE
         assert grad.shape == w.shape
         return cost, grad
@@ -68,17 +92,36 @@ class LogisticRegressionClassifier():
            w: numpy array shape (d,) learned weight vector w
            history: list/np.array len epochs - value of cost function after every epoch. You know for plotting
         """
-        if w is None: w = np.zeros(X.shape[1])
-        history = []        
+        if w is None: w = np.zeros(X.shape[1]) #2 1
+        history = []   #1 1
         ### YOUR CODE HERE 14 - 20 lines
+        for i in range(epochs): #2 epochs+1
+            #Shuffle Data
+            shuff_X = np.copy(X) #2 epochs
+            shuff_Y = np.copy(y) #2 epochs
+            rand = np.random.get_state()
+            np.random.shuffle(shuff_X)
+            np.random.set_state(rand)
+            np.random.shuffle(shuff_Y)
+            n = len(shuff_X)
+            b = math.ceil(n/batch_size)
+            count=0
+            for j in range(b):
+                final = min(count+batch_size,n)
+                batchX = shuff_X[count:final]
+                batchY = shuff_Y[count:final]
+                cost, grad = self.cost_grad(batchX,batchY,w)
+                w = w - lr*(1/batch_size)*grad
+                history.append(cost)  
+                count += batch_size  
         ### END CODE
         self.w = w
         self.history = history
 
 
     def predict(self, X):
-        """ Classify each data element in X
 
+        """ Classify each data element in X
         Args:
             X: np.array shape (n,d) dtype float - Features 
         
@@ -88,6 +131,15 @@ class LogisticRegressionClassifier():
         """
         pred = np.zeros(X.shape[0])
         ### YOUR CODE HERE 1 - 4 lines
+        
+        ##Calculate predictions on Xw
+        for i in range(len(X)):
+            pred[i] = logistic(np.dot(self.w.T,X[i]))
+        
+        ##Converts to from 1s and -1s to 0s and 1s
+        out = np.sign(pred - 0.5)
+        out = np.where(out == -1, 0, 1)
+        
         ### END CODE
         return out
     
@@ -104,6 +156,9 @@ class LogisticRegressionClassifier():
         """
         s = 0
         ### YOUR CODE HERE 1 - 4 lines
+        prob = self.predict(X)
+        s = np.mean(prob == y)
+        #print('Score =',s)
         ### END CODE
         return s
         
@@ -148,5 +203,4 @@ if __name__ == '__main__':
     test_logistic()
     test_cost()
     test_grad()
-    
     
