@@ -26,6 +26,10 @@ def softmax(X):
     """
     res = np.zeros(X.shape)
     ### YOUR CODE HERE no for loops please
+    res=[np.exp(x)/np.sum(np.exp(x)) for x in X]
+    res=np.asarray(res)
+    #res=np.exp(x) / np.exp(x).sum()
+    return res
     ### END CODE
     return res
 
@@ -39,6 +43,7 @@ def one_in_k_encoding(vec, k):
     n = vec.shape[0]
     enc = np.zeros((n, k))
     enc[np.arange(n), vec] = 1
+    
     return enc
     
 class SoftmaxClassifier():
@@ -65,7 +70,14 @@ class SoftmaxClassifier():
         grad = np.zeros(W.shape)*np.nan
         Yk = one_in_k_encoding(y, self.num_classes) # may help - otherwise you may remove it
         ### YOUR CODE HERE
-        ### END CODE
+        grad=-((X.T@(Yk-softmax(X@W)))/len(X))
+        cost=0
+        for x, yk in zip(X, Yk):
+            log_softmax = np.log(softmax(np.dot(x.T, W).reshape((1,W.shape[1]))))
+            c = np.dot(log_softmax, yk)
+            cost += c
+        cost = -cost / len(X)
+                ### END CODE
         return cost, grad
 
 
@@ -89,6 +101,28 @@ class SoftmaxClassifier():
         if W is None: W = np.zeros((X.shape[1], self.num_classes))
         history = []
         ### YOUR CODE HERE
+        if W is None: W = np.zeros((X.shape[1], self.num_classes))
+        history = []
+        for i in range(epochs):
+            #Shuffle Data
+            shuff_X = np.copy(X)
+            shuff_Y = np.copy(Y)
+            rand = np.random.get_state()
+            np.random.set_state(rand)
+            np.random.shuffle(shuff_Y)
+            np.random.set_state(rand)
+            np.random.shuffle(shuff_X)
+            n = len(shuff_X)
+            b = math.ceil(n/batch_size)
+            count=0
+            for j in range(b):
+                final = min(count+batch_size,n)
+                batchX = shuff_X[count:final]
+                batchY = shuff_Y[count:final]
+                cost, grad = self.cost_grad(batchX,batchY,W)
+                W-=lr*grad
+                history.append(cost)  
+                count += batch_size 
         ### END CODE
         self.W = W
         self.history = history
@@ -105,6 +139,8 @@ class SoftmaxClassifier():
         """
         out = 0
         ### YOUR CODE HERE 1-4 lines
+        prob = self.predict(X)
+        out = np.mean(prob == Y)
         ### END CODE
         return out
 
@@ -118,6 +154,8 @@ class SoftmaxClassifier():
         """
         out = np.zeros(X.shape[0])
         ### YOUR CODE HERE - 1-4 lines
+        for i in range(X.shape[0]):
+            out[i]=np.argmax(X[i]@self.W)
         ### END CODE
         return out
     
